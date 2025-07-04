@@ -7,7 +7,9 @@
     body {
       margin: 0;
       height: 100vh;
-      background: #111;
+      background: #111 url('https://media-public.canva.com/clENA/MAF6l8clENA/1/tl.png') no-repeat center center;
+      background-size: contain;
+      background-blend-mode: overlay;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -21,6 +23,7 @@
       font-size: 18px;
       color: #ccc;
       transition: opacity 0.5s ease;
+      backdrop-filter: blur(4px);
     }
 
     .scene {
@@ -54,7 +57,7 @@
     }
 
     .card__face--back {
-      background-image: url('https://i.ibb.co/hFQXckk7/2.png');
+      background-image: url('https://i.ibb.co/pB3FvKFL/2.png');
       transform: rotateY(180deg);
       position: relative;
       overflow: hidden;
