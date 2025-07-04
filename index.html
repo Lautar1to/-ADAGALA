@@ -1,172 +1,248 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Invitación 3D Interactiva</title>
-  <style>
-    body {
-      margin: 0;
-      height: 100vh;
-      background: #111 url('https://media-public.canva.com/clENA/MAF6l8clENA/1/tl.png') no-repeat center center;
-      background-size: contain;
-      background-blend-mode: overlay;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-family: sans-serif;
-      color: white;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Invitación 3D Interactiva con Luz</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-    #instruction {
-      margin-bottom: 20px;
-      font-size: 18px;
-      color: #ccc;
-      transition: opacity 0.5s ease;
-      backdrop-filter: blur(4px);
-    }
+        body {
+            margin: 0;
+            background-color: #111;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: sans-serif;
+            color: white;
+            overflow: hidden;
+        }
 
-    .scene {
-      width: 715px;
-      height: 375px;
-      perspective: 1500px;
-    }
+        #instruction {
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: #ccc;
+            opacity: 1; /* Aseguramos que sea visible inicialmente */
+            transition: opacity 0.5s ease;
+        }
 
-    .card {
-      width: 100%;
-      height: 100%;
-      position: relative;
-      transform-style: preserve-3d;
-      transition: transform 0.1s ease-out;
-      cursor: grab;
-    }
+        .scene {
+            /* Mantengo tus dimensiones originales si estas eran las correctas para tus imágenes */
+            width: 715px; 
+            height: 375px; 
+            perspective: 1500px;
+        }
 
-    .card__face {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      backface-visibility: hidden;
-      background-size: cover;
-      background-position: center;
-      border-radius: 10px;
-      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
-    }
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out, box-shadow 0.3s ease; /* Añadimos transición para la sombra */
+            cursor: grab;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4); /* Sombra base */
+            border-radius: 10px;
+        }
 
-    .card__face--front {
-      background-image: url('https://i.ibb.co/5hw9JzNZ/1.png');
-    }
+        /* Efecto hover: la tarjeta se levanta un poco y la sombra se acentúa */
+        .card:hover {
+            transform: translateY(-5px) scale(1.01); /* Pequeño levantamiento y escala */
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6); /* Sombra más pronunciada */
+        }
+        
+        /* Cuando se está arrastrando, el cursor también cambia */
+        .card.dragging {
+            cursor: grabbing;
+        }
 
-    .card__face--back {
-      background-image: url('https://i.ibb.co/pB3FvKFL/2.png');
-      transform: rotateY(180deg);
-      position: relative;
-      overflow: hidden;
-    }
 
-    .card__face--back::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -75%;
-      width: 50%;
-      height: 100%;
-      background: linear-gradient(
-        120deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.4) 50%,
-        transparent 100%
-      );
-      transform: skewX(-25deg);
-      animation: shine 2s ease-out 1 forwards;
-      pointer-events: none;
-    }
+        .card__face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            background-size: cover;
+            background-position: center;
+            border-radius: 10px;
+            overflow: hidden;
+            /* La sombra del face ya no es necesaria aquí, la pondremos en .card */
+            /* box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4); */ 
+            /* Añadimos la transición para el background-position de la luz */
+            transition: background-position 0.05s linear; /* Más rápido el movimiento de la luz */
+        }
 
-    @keyframes shine {
-      0% {
-        left: -75%;
-      }
-      100% {
-        left: 130%;
-      }
-    }
-  </style>
+        .card__face--front {
+            background-image: url('https://i.ibb.co/5hw9JzNZ/1.png'); /* Tu imagen frontal */
+        }
+
+        .card__face--back {
+            background-image: url('https://i.ibb.co/hFQXckk7/2.png'); /* Tu imagen trasera */
+            transform: rotateY(180deg);
+        }
+
+        .light {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            border-radius: 10px;
+            /* El gradiente inicial es transparente, se actualizará con JS */
+            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.0), transparent 80%);
+            mix-blend-mode: overlay;
+            /* Transición para la opacidad de la luz, no para el background-position */
+            transition: opacity 0.3s ease; 
+            opacity: 0; /* Inicialmente oculto */
+        }
+
+        /* La luz se hace visible solo cuando la tarjeta tiene la clase 'dragging' */
+        .card.dragging .light {
+            opacity: 1; 
+        }
+    </style>
 </head>
 <body>
-  <div id="instruction">Presioná en la tarjeta para interactuar</div>
-  <div class="scene">
-    <div class="card" id="card">
-      <div class="card__face card__face--front"></div>
-      <div class="card__face card__face--back"></div>
+    <div id="instruction">Presioná y mové para rotar la tarjeta</div>
+
+    <div class="scene">
+        <div class="card" id="card">
+            <div class="card__face card__face--front">
+                <div class="light" id="light-front"></div>
+            </div>
+            <div class="card__face card__face--back">
+                <div class="light" id="light-back"></div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script>
-    const card = document.getElementById("card");
-    const instruction = document.getElementById("instruction");
+    <script>
+        const card = document.getElementById("card");
+        const lightFront = document.getElementById("light-front");
+        const lightBack = document.getElementById("light-back");
+        const instruction = document.getElementById("instruction");
 
-    let isDragging = false;
-    let currentX = 0;
-    let currentY = 0;
-    let lastX = 0;
-    let lastY = 0;
-    let rotatedOnce = false;
+        let isDragging = false;
+        let currentX = 0; // Rotación actual de la tarjeta (acumulada)
+        let currentY = 0;
+        let lastMouseX = 0; // Última posición del cursor para calcular delta
+        let lastMouseY = 0;
 
-    function rotateCard(x, y) {
-      card.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
-    }
+        let cardRect; // Para almacenar las dimensiones de la tarjeta
 
-    function hideInstruction() {
-      if (!rotatedOnce) {
-        instruction.style.opacity = 0;
-        rotatedOnce = true;
-      }
-    }
+        function updateCardRect() {
+            cardRect = card.getBoundingClientRect();
+        }
 
-    // PC
-    document.addEventListener("mousedown", (e) => {
-      isDragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      hideInstruction();
-    });
+        // Llamar una vez al inicio y cada vez que el tamaño de la ventana cambie
+        window.addEventListener('resize', updateCardRect);
+        updateCardRect(); // Inicializar al cargar la página
 
-    document.addEventListener("mouseup", () => {
-      isDragging = false;
-    });
+        function rotateCard() {
+            card.style.transform = `rotateY(${currentX}deg) rotateX(${currentY}deg)`;
+        }
 
-    document.addEventListener("mousemove", (e) => {
-      if (!isDragging) return;
-      const deltaX = e.clientX - lastX;
-      const deltaY = e.clientY - lastY;
-      currentX += deltaX * 0.5;
-      currentY -= deltaY * 0.5;
-      rotateCard(currentX, currentY);
-      lastX = e.clientX;
-      lastY = e.clientY;
-    });
+        function updateLight(e) {
+            // Solo actualizamos la luz si estamos arrastrando
+            if (!isDragging) return;
 
-    // Móvil
-    document.addEventListener("touchstart", (e) => {
-      isDragging = true;
-      lastX = e.touches[0].clientX;
-      lastY = e.touches[0].clientY;
-      hideInstruction();
-    });
+            let clientX, clientY;
+            if (e.touches) { // Móvil
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else { // PC
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
 
-    document.addEventListener("touchend", () => {
-      isDragging = false;
-    });
+            // Calcular coordenadas del cursor relativas a la tarjeta
+            const mouseX = clientX - cardRect.left;
+            const mouseY = clientY - cardRect.top;
 
-    document.addEventListener("touchmove", (e) => {
-      if (!isDragging) return;
-      const deltaX = e.touches[0].clientX - lastX;
-      const deltaY = e.touches[0].clientY - lastY;
-      currentX += deltaX * 0.5;
-      currentY -= deltaY * 0.5;
-      rotateCard(currentX, currentY);
-      lastX = e.touches[0].clientX;
-      lastY = e.touches[0].clientY;
-    });
-  </script>
+            // Calcular posición de la luz en porcentaje (0-100%)
+            const lightX = (mouseX / cardRect.width) * 100;
+            const lightY = (mouseY / cardRect.height) * 100;
+
+            // La luz frontal sigue directamente el cursor
+            lightFront.style.background = `radial-gradient(circle at ${lightX}% ${lightY}%, rgba(255,255,255,0.4), transparent 70%)`; 
+            
+            // La luz trasera se mueve de forma opuesta para simular el reverso
+            lightBack.style.background = `radial-gradient(circle at ${100 - lightX}% ${100 - lightY}%, rgba(255,255,255,0.4), transparent 70%)`;
+        }
+
+        function hideInstruction() {
+            instruction.style.opacity = 0;
+        }
+
+        // --- Eventos para PC ---
+        card.addEventListener("mousedown", (e) => {
+            isDragging = true;
+            card.classList.add('dragging'); // Añade la clase para mostrar la luz y cambiar el cursor
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            hideInstruction();
+            updateCardRect(); // Actualizar dimensiones de la tarjeta por si ha habido scroll o algo
+            updateLight(e); // Mostrar la luz inmediatamente al pulsar
+        });
+
+        document.addEventListener("mouseup", () => {
+            isDragging = false;
+            card.classList.remove('dragging'); // Remueve la clase para ocultar la luz y restaurar el cursor
+        });
+
+        document.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+
+            // Calcular el cambio en la posición del cursor
+            const deltaX = e.clientX - lastMouseX;
+            const deltaY = e.clientY - lastMouseY;
+
+            // Ajusta la sensibilidad de la rotación (0.2 es una buena base, puedes experimentar)
+            currentX += deltaX * 0.2; // Sensibilidad X (controla la rotación Y de la tarjeta)
+            currentY -= deltaY * 0.2; // Sensibilidad Y (controla la rotación X de la tarjeta) (negativo para que se mueva intuitivamente)
+
+            rotateCard(); // Actualiza la rotación de la tarjeta
+            updateLight(e); // Actualiza la posición de la luz
+
+            // Actualiza la última posición del cursor
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        });
+
+        // --- Eventos para Móviles ---
+        card.addEventListener("touchstart", (e) => {
+            isDragging = true;
+            card.classList.add('dragging');
+            lastMouseX = e.touches[0].clientX;
+            lastMouseY = e.touches[0].clientY;
+            hideInstruction();
+            updateCardRect();
+            updateLight(e);
+        }, { passive: true }); 
+
+        document.addEventListener("touchend", () => {
+            isDragging = false;
+            card.classList.remove('dragging');
+        });
+
+        document.addEventListener("touchmove", (e) => {
+            if (!isDragging) return;
+
+            const deltaX = e.touches[0].clientX - lastMouseX;
+            const deltaY = e.touches[0].clientY - lastMouseY;
+
+            currentX += deltaX * 0.2;
+            currentY -= deltaY * 0.2;
+
+            rotateCard();
+            updateLight(e);
+            
+            lastMouseX = e.touches[0].clientX;
+            lastMouseY = e.touches[0].clientY;
+        }, { passive: true });
+    </script>
 </body>
 </html>
